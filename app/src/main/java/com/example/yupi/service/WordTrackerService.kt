@@ -29,6 +29,11 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.example.yupi.analytics.SocialPatternAnalyzer
+import com.example.yupi.analytics.model.SocialMetrics
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class WordTrackerService : Service() {
 
@@ -53,8 +58,12 @@ class WordTrackerService : Service() {
     private var repository: WordRepository? = null
     private var ownerEmbedding: FloatArray? = null
 
+    private var socialPatternAnalyzer: SocialPatternAnalyzer? = null
+
+
     override fun onCreate() {
         super.onCreate()
+        running = true
         Log.d(TAG, "onCreate: Menjalankan Foreground Service")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
@@ -71,6 +80,7 @@ class WordTrackerService : Service() {
             syllableDetector = SyllableDetector(sampleRate)
             repository = WordRepository(this@WordTrackerService)
             ownerEmbedding = profileManager?.getOwnerEmbedding()
+            socialPatternAnalyzer = SocialPatternAnalyzer(similarityThreshold = OWNER_THRESHOLD)
             isInitialized = true
             Log.d(TAG, "initHeavyComponents: Inisialisasi komponen selesai")
         } catch (e: Exception) {
@@ -80,6 +90,11 @@ class WordTrackerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!VoiceProfileManager(this).isProfileRegistered()) {
+            Log.w(TAG, "Profil suara belum ada, service dihentikan")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         Log.d(TAG, "onStartCommand: Memulai perintah startRecording")
         serviceScope.launch(Dispatchers.IO) {
             while (!isInitialized) delay(100)
@@ -172,6 +187,7 @@ class WordTrackerService : Service() {
         val v = verifier ?: return
         val syl = syllableDetector ?: return
         val repo = repository ?: return
+        val analyzer = socialPatternAnalyzer ?: return
         val owner = ownerEmbedding
         if (owner == null) {
             Log.e(TAG, "Profil suara belum ada"); stopSelf(); return
@@ -184,15 +200,24 @@ class WordTrackerService : Service() {
                 val similarity = v.calculateCosineSimilarity(v.extractEmbedding(forVerify), owner)
                 val isOwner = similarity >= OWNER_THRESHOLD
                 val took = SystemClock.elapsedRealtime() - t0
-                Log.d(
-                    TAG,
-                    "ucapan ${audio.size / 16} ms, similarity=" + "%.2f".format(similarity) +
-                            ", pemilik=$isOwner, verifikasi=$took ms"
-                )
-                if (!isOwner) continue
+                val durationMs = (audio.size / 16).toLong()
 
                 val syllables = syl.countSyllablesInBuffer(audio)
                 val words = syl.estimateWordCount(syllables)
+                analyzer.processUtterance(
+                    similarity = similarity,
+                    durationMs = durationMs,
+                    wordCount = if (isOwner) words else 0
+                )
+
+                Log.d(
+                    TAG,
+                    "ucapan $durationMs ms, similarity=" + "%.2f".format(similarity) +
+                            ", pemilik=$isOwner, verifikasi=$took ms"
+                )
+                _socialMetrics.value = analyzer.metrics.value
+                if (!isOwner) continue
+
                 Log.d(TAG, "suku kata=$syllables, kata=$words")
                 if (words > 0) repo.incrementTodayWordCount(words)
             }
@@ -202,6 +227,7 @@ class WordTrackerService : Service() {
     }
 
     override fun onDestroy() {
+        running = false
         Log.d(TAG, "onDestroy: Service dihentikan")
         isRecording = false
         serviceScope.cancel() // blok finally di atas yang melepas AudioRecord dan model
@@ -239,5 +265,9 @@ class WordTrackerService : Service() {
         private const val MAX_UTTERANCE = 16000 * 10   // potong di 10 detik
         private const val VERIFY_MAX = 48000           // 3 detik, sama dengan pendaftaran
         private const val OWNER_THRESHOLD = 0.41f
+
+        private val _socialMetrics = MutableStateFlow(SocialMetrics())
+        val socialMetrics: StateFlow<SocialMetrics> = _socialMetrics.asStateFlow()
+        @Volatile var running = false
     }
 }

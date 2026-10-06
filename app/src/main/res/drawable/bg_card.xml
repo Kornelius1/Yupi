@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Badan kaca: putih tembus, lebih terang di atas -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#66FFFFFF"
+                android:endColor="#33FFFFFF" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+
+    <!-- Tepi kaca: garis putih tipis yang memantulkan cahaya -->
+    <item>
+        <shape android:shape="rectangle">
+            <stroke
+                android:width="0.5dp"
+                android:color="#B3FFFFFF" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+</layer-list>

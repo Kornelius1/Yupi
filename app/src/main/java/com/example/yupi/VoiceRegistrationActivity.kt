@@ -13,11 +13,13 @@ import com.example.yupi.audio.SpeakerVerifier
 import com.example.yupi.audio.VoiceProfileManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 
 class VoiceRegistrationActivity : AppCompatActivity() {
 
@@ -36,6 +38,15 @@ class VoiceRegistrationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_voice_registration)
 
+        val root = findViewById<android.view.View>(R.id.rootRegistration)
+        val extraTop = (16 * resources.displayMetrics.density).toInt()
+        val baseBottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(top = bars.top + extraTop, bottom = baseBottom + bars.bottom)
+            insets
+        }
+
         verifier = SpeakerVerifier(this)
         profileManager = VoiceProfileManager(this)
 
@@ -44,6 +55,11 @@ class VoiceRegistrationActivity : AppCompatActivity() {
 
         btnRecord =
             findViewById(R.id.btnRecordVoice)
+
+        if (profileManager.isProfileRegistered()) {
+            tvStatus.text = "Suara sudah terdaftar. Rekam ulang untuk menggantinya."
+            btnRecord.text = "Rekam Ulang"
+        }
 
         btnRecord.setOnClickListener {
             startVoiceEnrollment()

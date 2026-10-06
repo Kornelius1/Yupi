@@ -37,6 +37,9 @@ android {
 }
 
 dependencies {
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("com.airbnb.android:lottie:6.7.1")
     implementation(libs.androidx.appcompat)
     implementation(libs.onnxruntime.android)
     implementation(libs.retrofit)

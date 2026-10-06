@@ -38,12 +38,6 @@ class SileroVadDetector(context: Context) {
 
     }
 
-    fun isSpeech(
-        audioSamples: ShortArray,
-        threshold: Float = 0.5f
-    ): Boolean {
-        return getSpeechProbability(audioSamples) >= threshold
-    }
 
     fun getSpeechProbability(
         audioSamples: ShortArray

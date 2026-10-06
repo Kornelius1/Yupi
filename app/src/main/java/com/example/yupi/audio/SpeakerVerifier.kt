@@ -93,7 +93,7 @@ class SpeakerVerifier(context: Context) {
         audio: FloatArray
     ): FloatArray {
 
-        val sampleRate = 16000
+
         val nFft = 400
         val frameLength = 400
         val hopLength = 160
@@ -353,23 +353,7 @@ class SpeakerVerifier(context: Context) {
                         )
     }
 
-    fun verifyOwner(
-        audioSamples: ShortArray,
-        ownerEmbedding: FloatArray,
-        threshold: Float = 0.65f
-    ): Boolean {
 
-        val currentEmbedding =
-            extractEmbedding(audioSamples)
-
-        val similarity =
-            calculateCosineSimilarity(
-                currentEmbedding,
-                ownerEmbedding
-            )
-
-        return similarity >= threshold
-    }
 
     fun close() {
         session.close()

@@ -10,8 +10,6 @@ class SyllableDetector(
 
     private var minPeakDistanceMs = 100L
 
-
-
     fun countSyllablesInBuffer(
         audioSamples: ShortArray
     ): Int {
